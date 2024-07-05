@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.use(express.json());
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
@@ -28,7 +29,7 @@ const tempProjectSchema = new mongoose.Schema({
 });
 const TempProject = mongoose.model('TempProject', tempProjectSchema);
 
-// Express Route
+// Express Route to get data
 app.get('/api/common/get-data/:fileId', async (req, res) => {
     const { fileId } = req.params;
 
@@ -54,6 +55,31 @@ app.get('/api/common/get-data/:fileId', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch data' });
     }
 });
+
+// Express Route to add new data
+app.post('/api/common/add-data', async (req, res) => {
+    const { name, projectName } = req.body;
+
+    try {
+        // Check if project exists, if not create a new one
+        let project = await TempProject.findOne({ name: projectName });
+        if (!project) {
+            project = new TempProject({ name: projectName });
+            await project.save();
+        }
+
+        // Create and save new user
+        const newUser = new TempUser({ name, project: project._id });
+        await newUser.save();
+
+        res.status(201).json(newUser);
+    } catch (error) {
+        console.error('Error adding data:', error);
+        res.status(500).json({ error: 'Failed to add data' });
+    }
+});
+
+
 
 // Start Server
 app.listen(PORT, () => {
